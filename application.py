@@ -1,5 +1,5 @@
 import sys
-from PyQt5.QtWidgets import QWidget, QApplication, QGridLayout, QVBoxLayout, QHBoxLayout, QPushButton, QApplication, QMainWindow, QTableWidgetItem, QDialog, QTabWidget, QDialogButtonBox, QTableWidget, QAction
+from PyQt5.QtWidgets import QWidget, QMessageBox, QApplication, QGridLayout, QVBoxLayout, QHBoxLayout, QPushButton, QApplication, QMainWindow, QTableWidgetItem, QDialog, QTabWidget, QDialogButtonBox, QTableWidget, QAction
 from PyQt5 import QtGui
 from PyQt5.QtGui import QIcon
 
@@ -10,17 +10,39 @@ class App(QWidget):
 		self.setWindowTitle("Application")
 		self.tabs = Tab(self)
 		self.btns = Buttons(self)
-		self.box = QHBoxLayout(self)
-		self.box.addWidget(self.tabs)
-		self.box.addWidget(self.btns)
-		self.setLayout(self.box)
+		self.msg = MessageBox(self)
+		self.grid = QHBoxLayout(self)
+		self.vbox = QVBoxLayout(self)
+		self.vbox2 = QVBoxLayout(self)
+		self.vbox.addWidget(self.tabs)
+		self.vbox2.addWidget(self.btns)
+		self.vbox2.addWidget(self.msg)
+		self.vbox2.addStretch()
+		self.grid.addItem(self.vbox)
+		self.grid.addItem(self.vbox2)
+		self.setLayout(self.grid)
 
 		self.show()
 
 
+class MessageBox(QWidget):
+	def __init__(self, parent):
+		super(QWidget, self).__init__(parent)
+		msg = QMessageBox()
+		msg.setIcon(QMessageBox.Warning)
+
+		msg.setText("This is message box")
+		msg.setInformativeText("This is additional information")
+		msg.setDetailedText("The details are as follow")
+
+		self.box = QVBoxLayout(self)
+		self.box.addWidget(msg)
+		self.setLayout(self.box)
+
+
 class Buttons(QWidget):
 	def __init__(self, parent):
-		super(Buttons, self).__init__()
+		super(QWidget, self).__init__(parent)
 		self.load = QPushButton('Load')
 		self.validate = QPushButton('Validate')
 		self.submit = QPushButton('Submit')
@@ -107,11 +129,11 @@ class CheatAngle(QMainWindow):
 
 		self.form_widget = MyTable(10, 7)
 		self.setCentralWidget(self.form_widget)
-		col_headers = ['ID', 'Angle leg 1', 'Angle leg 2', 'Angle thickness', 'Sher load', 'Bolt diameter', 'Bolt grade']
+		col_headers = ['ID', 'Angle leg 1', 'Angle leg 2', 'Angle thickness', 'Sher load', 'Bolt diameter',
+		               'Bolt grade']
 		self.form_widget.setHorizontalHeaderLabels(col_headers)
 		self.form_widget.resizeColumnsToContents()
 		self.form_widget.resizeRowsToContents()
-
 
 
 if __name__ == '__main__':
