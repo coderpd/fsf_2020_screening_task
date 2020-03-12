@@ -66,19 +66,31 @@ class App(QWidget):
 				for row in self.errors[id]:
 					for col in self.errors[id][row]:
 						self.detailedError = self.detailedError+self.errors[id][row][col]+'\n'
-		self.infotmativeError = ""
+		self.informativeError = ""
 		count = 0
 		for id in self.count_errors:
 			if self.count_errors[id]:
 				count = count + self.count_errors[id]
-				self.infotmativeError = self.infotmativeError + str(self.count_errors[id]) + " error found in tab "+self.tabs.id[id]+'\n'
+				self.informativeError = self.informativeError + str(self.count_errors[id]) + " error found in tab "+self.tabs.id[id]+'\n'
 		self.textError = "Total "+str(count)+" errors found"
 		self.msg.msg.setText(self.textError)
-		self.msg.msg.setInformativeText(self.infotmativeError)
+		self.msg.msg.setInformativeText(self.informativeError)
 		self.msg.msg.setDetailedText(self.detailedError)
 		self.msg.msg.setIcon(QMessageBox.Warning)
 
+
+	def confirmWarning(self):
+		wbox = QMessageBox()
+		wbox.addButton("Force Submit", QMessageBox.AcceptRole)
+		wbox.addButton("Discard Submit", QMessageBox.RejectRole)
+		wbox.setText(self.textError+". Do you want to force save?")
+		wbox.setInformativeText(self.informativeError)
+		wbox.setDetailedText(self.detailedError)
+		return wbox.exec_()
+
 	def submit(self):
+		if(sum(self.count_errors.values())) > 0:
+			if self.confirmWarning(): return
 		directory = str(QFileDialog.getExistingDirectory(self, "Select Directory"))
 		for id in self.data:
 			for d in self.data[id].values():
@@ -87,8 +99,6 @@ class App(QWidget):
 				with open(directory+'/'+self.tabs.id[id]+'_'+str(d['ID'])+'.txt', 'w') as file:
 					file.write(str(d))
 					print(d)
-
-
 
 
 class MessageBox(QWidget):
@@ -100,13 +110,19 @@ class MessageBox(QWidget):
 
 		self.msg.setText("No error")
 		self.msg.setInformativeText("Everything all right")
-		self.msg.setStandardButtons(QMessageBox.Ignore)
+#		self.msg.setStandardButtons(QMessageBox.NoButton)
+		self.msg.addButton("Close App", QMessageBox.ResetRole)
+		self.msg.buttonClicked.connect(self.close)
 
 		self.box = QVBoxLayout(self)
 		self.box.addWidget(self.label)
 		self.box.addWidget(self.msg)
 		self.box.addStretch()
 		self.setLayout(self.box)
+
+	@pyqtSlot()
+	def close(self):
+		exit(0)
 
 
 class Buttons(QWidget):
