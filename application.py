@@ -1,5 +1,5 @@
 import sys
-from PyQt5.QtWidgets import QLabel, QWidget, QMessageBox, QStatusBar, QComboBox, QApplication, QGridLayout, QVBoxLayout, QHBoxLayout, QPushButton, QApplication, QMainWindow, QTableWidgetItem, QDialog, QTabWidget, QDialogButtonBox, QTableWidget, QAction
+from PyQt5.QtWidgets import QLabel, QWidget, QMessageBox, QFileDialog, QStatusBar, QComboBox, QApplication, QGridLayout, QVBoxLayout, QHBoxLayout, QPushButton, QApplication, QMainWindow, QTableWidgetItem, QDialog, QTabWidget, QDialogButtonBox, QTableWidget, QAction
 from PyQt5 import QtGui
 from PyQt5.QtGui import QIcon
 from PyQt5.QtCore import pyqtSlot
@@ -23,47 +23,72 @@ class App(QWidget):
 
 		self.errors = {}
 		self.count_errors = {}
+		self.data = {}
 
 	def validate(self, table):
 		count = 0
 		e = {}
+		d = {}
 		for i in range(table.rowCount()):
 			e[i] = {}
-			e2 = e[i]
+			d[i] = {}
+			for j in range(table.rowCount()):
+				if table.item(i,0) is None or table.item(j,0) is None or i == j:
+					continue
+				try:
+					if table.item(i,0).text() == table.item(j,0).text():
+						count = count + 1
+						e[i][0] = 'id of '+str(i+1)+' data similar to '+str(j+1)+' data'
+				except ValueError:
+					continue
 			for j in range(table.columnCount()):
 				value = table.item(i,j)
-				if value == None:
-					e2[j] = 'None'
+				if value is None or value.text() == '':
+					e[i][j] = 'No value in the cell '+str(i+1)+', '+str(j+1)
 					count = count + 1
+					d[i][table.horizontalHeaderItem(j).text()] = None
 				else:
 					try:
-						int(value.text())
+						d[i][table.horizontalHeaderItem(j).text()] = int(value.text())
 					except ValueError:
-						e2[j] = 'not Int'
+						e[i][j] = 'Value is not Int in the cell '+str(i+1)+', '+str(j+1)
+						d[i][table.horizontalHeaderItem(j).text()] = value.text()
 						count = count + 1
 		self.errors[id(table)] = e
 		self.count_errors[id(table)] = count
+		self.data[id(table)] = d
 
 	def setMessageBox(self):
-		print(self.errors)
-		print(self.count_errors)
-		detail = ""
+		self.detailedError = ""
 		for id in self.errors:
 			if self.count_errors[id]:
-				form = self.errors[id]
-				detail = detail + "Errors in tab "+self.tabs.id[id]+":\n"
-				for row in form:
-					row_errors = form[row]
-					for col in row_errors:
-						col_errors = row_errors[col]
-						detail = detail+'('+str(row)+','+str(col)+') '+col_errors+'\n'
-		text = ""
+				self.detailedError = self.detailedError + "Errors in tab "+self.tabs.id[id]+":\n"
+				for row in self.errors[id]:
+					for col in self.errors[id][row]:
+						self.detailedError = self.detailedError+self.errors[id][row][col]+'\n'
+		self.infotmativeError = ""
+		count = 0
 		for id in self.count_errors:
 			if self.count_errors[id]:
-				text = text + str(self.count_errors[id]) + " error found in tab "+self.tabs.id[id]+'\n'
-		self.msg.msg.setText(text)
-		self.msg.msg.setDetailedText(detail)
+				count = count + self.count_errors[id]
+				self.infotmativeError = self.infotmativeError + str(self.count_errors[id]) + " error found in tab "+self.tabs.id[id]+'\n'
+		self.textError = "Total "+str(count)+" errors found"
+		self.msg.msg.setText(self.textError)
+		self.msg.msg.setInformativeText(self.infotmativeError)
+		self.msg.msg.setDetailedText(self.detailedError)
 		self.msg.msg.setIcon(QMessageBox.Warning)
+
+	def submit(self):
+		directory = str(QFileDialog.getExistingDirectory(self, "Select Directory"))
+		for id in self.data:
+			for d in self.data[id].values():
+				if d['ID'] == None: continue
+				print(directory + '/' + self.tabs.id[id] + '_' + str(d['ID']) + '.txt')
+				with open(directory+'/'+self.tabs.id[id]+'_'+str(d['ID'])+'.txt', 'w') as file:
+					file.write(str(d))
+					print(d)
+
+
 
 
 class MessageBox(QWidget):
@@ -74,7 +99,7 @@ class MessageBox(QWidget):
 		self.msg.setIcon(QMessageBox.Information)
 
 		self.msg.setText("No error")
-#		self.msg.setInformativeText("Everything all right")
+		self.msg.setInformativeText("Everything all right")
 		self.msg.setStandardButtons(QMessageBox.Ignore)
 
 		self.box = QVBoxLayout(self)
@@ -92,9 +117,11 @@ class Buttons(QWidget):
 		self.validate = QPushButton('Validate')
 		self.validate.clicked.connect(self.validate_action)
 		self.submit = QPushButton('Submit')
+		self.submit.clicked.connect(self.submit_action)
 		self.validateall = QPushButton('Validate All')
 		self.validateall.clicked.connect(self.validateall_action)
 		self.submitall = QPushButton('Submit All')
+		self.submitall.clicked.connect(self.submitall_action)
 		self.dropdown.addItems(["FinPlate", "TensionMember", "BCEndPlate", "CheatAngle"])
 
 		self.vbox = QVBoxLayout(self)
@@ -116,6 +143,9 @@ class Buttons(QWidget):
 
 	@pyqtSlot()
 	def validate_action(self):
+		App.errors = {}
+		App.count_errors = {}
+		App.data = {}
 		index = self.dropdown.currentIndex()
 		if index == 0:
 			App.validate(App.tabs.finplate.form_widget)
@@ -126,15 +156,33 @@ class Buttons(QWidget):
 		else:
 			App.validate(App.tabs.cheatangle.form_widget)
 		App.setMessageBox()
+		print(App.count_errors)
+		print(App.errors)
+		print(App.data)
 
 	@pyqtSlot()
 	def validateall_action(self):
+		App.errors = {}
+		App.count_errors = {}
+		App.data = {}
 		App.validate(App.tabs.finplate.form_widget)
 		App.validate(App.tabs.tensionmember.form_widget)
 		App.validate(App.tabs.bcendplate.form_widget)
 		App.validate(App.tabs.cheatangle.form_widget)
 		App.setMessageBox()
+		print(App.count_errors)
+		print(App.errors)
+		print(App.data)
 
+	@pyqtSlot()
+	def submit_action(self):
+		self.validate_action()
+		App.submit()
+
+	@pyqtSlot()
+	def submitall_action(self):
+		self.validateall_action()
+		App.submit()
 
 class Tab(QWidget):
 	def __init__(self, parent):
@@ -177,7 +225,7 @@ class FinPlate(QMainWindow):
 	def __init__(self):
 		super().__init__()
 
-		self.form_widget = MyTable(1, 7)
+		self.form_widget = MyTable(2, 7)
 		self.setCentralWidget(self.form_widget)
 		col_headers = ['ID', 'Connection type', 'Axial load', 'Sher load', 'Bolt diameter', 'Bolt grade', 'Plate Thickness']
 		self.form_widget.setHorizontalHeaderLabels(col_headers)
