@@ -1,8 +1,6 @@
 import sys
-from PyQt5.QtWidgets import QLabel, QWidget, QMessageBox, QFileDialog, QStatusBar, QComboBox, QApplication, QGridLayout, QVBoxLayout, QHBoxLayout, QPushButton, QApplication, QMainWindow, QTableWidgetItem, QDialog, QTabWidget, QDialogButtonBox, QTableWidget, QAction
-from PyQt5 import QtGui
-from PyQt5.QtGui import QIcon
 from PyQt5.QtCore import pyqtSlot
+from PyQt5.QtWidgets import QLabel, QWidget, QSpinBox, QMessageBox, QFileDialog, QComboBox, QGridLayout, QVBoxLayout, QHBoxLayout, QPushButton, QApplication, QTabWidget, QTableWidget
 
 
 class App(QWidget):
@@ -33,25 +31,25 @@ class App(QWidget):
 			e[i] = {}
 			d[i] = {}
 			for j in range(table.rowCount()):
-				if table.item(i,0) is None or table.item(j,0) is None or i == j:
+				if table.item(i, 0) is None or table.item(j, 0) is None or i == j:
 					continue
 				try:
-					if table.item(i,0).text() == table.item(j,0).text():
+					if table.item(i, 0).text() == table.item(j, 0).text():
 						count = count + 1
-						e[i][0] = 'id of '+str(i+1)+' data similar to '+str(j+1)+' data'
+						e[i][0] = 'id of ' + str(i + 1) + ' data similar to ' + str(j + 1) + ' data'
 				except ValueError:
 					continue
 			for j in range(table.columnCount()):
-				value = table.item(i,j)
+				value = table.item(i, j)
 				if value is None or value.text() == '':
-					e[i][j] = 'No value in the cell '+str(i+1)+', '+str(j+1)
+					e[i][j] = 'No value in the cell ' + str(i + 1) + ', ' + str(j + 1)
 					count = count + 1
 					d[i][table.horizontalHeaderItem(j).text()] = None
 				else:
 					try:
 						d[i][table.horizontalHeaderItem(j).text()] = int(value.text())
 					except ValueError:
-						e[i][j] = 'Value is not Int in the cell '+str(i+1)+', '+str(j+1)
+						e[i][j] = 'Value is not Int in the cell ' + str(i + 1) + ', ' + str(j + 1)
 						d[i][table.horizontalHeaderItem(j).text()] = value.text()
 						count = count + 1
 		self.errors[id(table)] = e
@@ -62,41 +60,43 @@ class App(QWidget):
 		self.detailedError = ""
 		for id in self.errors:
 			if self.count_errors[id]:
-				self.detailedError = self.detailedError + "Errors in tab "+self.tabs.id[id]+":\n"
+				self.detailedError = self.detailedError + "Errors in tab " + self.tabs.id[id] + ":\n"
 				for row in self.errors[id]:
 					for col in self.errors[id][row]:
-						self.detailedError = self.detailedError+self.errors[id][row][col]+'\n'
+						self.detailedError = self.detailedError + self.errors[id][row][col] + '\n'
 		self.informativeError = ""
-		count = 0
 		for id in self.count_errors:
 			if self.count_errors[id]:
-				count = count + self.count_errors[id]
-				self.informativeError = self.informativeError + str(self.count_errors[id]) + " error found in tab "+self.tabs.id[id]+'\n'
-		self.textError = "Total "+str(count)+" errors found"
+				self.informativeError = self.informativeError + str(self.count_errors[id]) + " error found in tab " + self.tabs.id[id] + '\n'
+		if sum(self.count_errors.values()):
+			self.textError = "Total " + str(sum(self.count_errors.values())) + " errors found"
+			self.msg.msg.setIcon(QMessageBox.Warning)
+		else:
+			self.textError = "No error"
+			self.informativeError = "Everything all right"
+			self.msg.msg.setIcon(QMessageBox.Information)
 		self.msg.msg.setText(self.textError)
 		self.msg.msg.setInformativeText(self.informativeError)
 		self.msg.msg.setDetailedText(self.detailedError)
-		self.msg.msg.setIcon(QMessageBox.Warning)
-
 
 	def confirmWarning(self):
 		wbox = QMessageBox()
 		wbox.addButton("Force Submit", QMessageBox.AcceptRole)
 		wbox.addButton("Discard Submit", QMessageBox.RejectRole)
-		wbox.setText(self.textError+". Do you want to force save?")
+		wbox.setText(self.textError + ". Do you want to force save?")
 		wbox.setInformativeText(self.informativeError)
 		wbox.setDetailedText(self.detailedError)
 		return wbox.exec_()
 
 	def submit(self):
-		if(sum(self.count_errors.values())) > 0:
+		if (sum(self.count_errors.values())) > 0:
 			if self.confirmWarning(): return
 		directory = str(QFileDialog.getExistingDirectory(self, "Select Directory"))
 		for id in self.data:
 			for d in self.data[id].values():
-				if d['ID'] == None: continue
+				if d['ID'] is None: continue
 				print(directory + '/' + self.tabs.id[id] + '_' + str(d['ID']) + '.txt')
-				with open(directory+'/'+self.tabs.id[id]+'_'+str(d['ID'])+'.txt', 'w') as file:
+				with open(directory + '/' + self.tabs.id[id] + '_' + str(d['ID']) + '.txt', 'w') as file:
 					file.write(str(d))
 					print(d)
 
@@ -110,7 +110,7 @@ class MessageBox(QWidget):
 
 		self.msg.setText("No error")
 		self.msg.setInformativeText("Everything all right")
-#		self.msg.setStandardButtons(QMessageBox.NoButton)
+		#		self.msg.setStandardButtons(QMessageBox.NoButton)
 		self.msg.addButton("Close App", QMessageBox.ResetRole)
 		self.msg.buttonClicked.connect(self.close)
 
@@ -164,13 +164,13 @@ class Buttons(QWidget):
 		App.data = {}
 		index = self.dropdown.currentIndex()
 		if index == 0:
-			App.validate(App.tabs.finplate.form_widget)
+			App.validate(App.tabs.finplate)
 		elif index == 1:
-			App.validate(App.tabs.tensionmember.form_widget)
+			App.validate(App.tabs.tensionmember)
 		elif index == 2:
-			App.validate(App.tabs.bcendplate.form_widget)
+			App.validate(App.tabs.bcendplate)
 		else:
-			App.validate(App.tabs.cheatangle.form_widget)
+			App.validate(App.tabs.cheatangle)
 		App.setMessageBox()
 		print(App.count_errors)
 		print(App.errors)
@@ -181,10 +181,10 @@ class Buttons(QWidget):
 		App.errors = {}
 		App.count_errors = {}
 		App.data = {}
-		App.validate(App.tabs.finplate.form_widget)
-		App.validate(App.tabs.tensionmember.form_widget)
-		App.validate(App.tabs.bcendplate.form_widget)
-		App.validate(App.tabs.cheatangle.form_widget)
+		App.validate(App.tabs.finplate)
+		App.validate(App.tabs.tensionmember)
+		App.validate(App.tabs.bcendplate)
+		App.validate(App.tabs.cheatangle)
 		App.setMessageBox()
 		print(App.count_errors)
 		print(App.errors)
@@ -200,31 +200,81 @@ class Buttons(QWidget):
 		self.validateall_action()
 		App.submit()
 
+
 class Tab(QWidget):
 	def __init__(self, parent):
 		super(QWidget, self).__init__(parent)
 		self.vbox = QVBoxLayout(self)
 
 		self.tabs = QTabWidget()
-		self.finplate = FinPlate()
-		self.tensionmember = TensionMember()
-		self.bcendplate = BCEndPlate()
-		self.cheatangle = CheatAngle()
-		self.id = {id(self.finplate.form_widget): 'Fin Plate', id(self.tensionmember.form_widget): 'Tension Member', id(self.cheatangle.form_widget): 'Cheat Angle', id(self.bcendplate.form_widget): 'BC End Plate'}
+		self.finplate = Table(
+			['ID', 'Connection type', 'Axial load', 'Sher load', 'Bolt diameter', 'Bolt grade', 'Plate Thickness'])
+		self.tensionmember = Table(
+			['ID', 'Member length', 'Tensile load', 'Support condition at End 1', 'Support condition at End 2'])
+		self.bcendplate = Table(
+			['ID', 'End plate type', 'Sher load', 'Axial load', 'Maximum Load', 'Bolt diameter', 'Bolt grade',
+			 'Plate thickness'])
+		self.cheatangle = Table(
+			['ID', 'Angle leg 1', 'Angle leg 2', 'Angle thickness', 'Sher load', 'Bolt diameter', 'Bolt grade'])
+		self.id = {id(self.finplate): 'Fin Plate', id(self.tensionmember): 'Tension Member', id(self.cheatangle): 'Cheat Angle', id(self.bcendplate): 'BC End Plate'}
 		self.tabs.addTab(self.finplate, "Fin Plate")
 		self.tabs.addTab(self.tensionmember, "Tension Member")
 		self.tabs.addTab(self.bcendplate, "BC End Plate")
 		self.tabs.addTab(self.cheatangle, "Cheat Angle")
 
+		self.spinbox = QSpinBox()
+		self.spinbox.setValue(1)
+		self.insert_btn = QPushButton('Insert Rows')
+		self.insert_btn.clicked.connect(self.insert_btn_action)
+		self.delete_btn = QPushButton('Delete Rows')
+		self.delete_btn.clicked.connect(self.delete_btn_action)
+
+		self.hbox = QHBoxLayout(self)
+		self.hbox.addWidget(self.spinbox)
+		self.hbox.addWidget(self.insert_btn)
+		self.hbox.addWidget(self.delete_btn)
+
 		self.vbox.addWidget(self.tabs)
+		self.vbox.addLayout(self.hbox)
 		self.setLayout(self.vbox)
 
+	@pyqtSlot()
+	def insert_btn_action(self):
+		if self.tabs.currentIndex() == 0:
+			table = self.finplate
+		elif self.tabs.currentIndex() == 1:
+			table = self.tensionmember
+		elif self.tabs.currentIndex() == 2:
+			table = self.bcendplate
+		else:
+			table = self.cheatangle
+		for i in range(self.spinbox.value()):
+			table.insertRow(table.rowCount())
+		table.resizeColumnsToContents()
+		table.resizeRowsToContents()
 
-class MyTable(QTableWidget):
-	def __init__(self, r, c):
-		super().__init__(r, c)
+	@pyqtSlot()
+	def delete_btn_action(self):
+		if self.tabs.currentIndex() == 0:
+			table = self.finplate
+		elif self.tabs.currentIndex() == 1:
+			table = self.tensionmember
+		elif self.tabs.currentIndex() == 2:
+			table = self.bcendplate
+		else:
+			table = self.cheatangle
+		for i in range(self.spinbox.value()):
+			table.removeRow(table.rowCount() - 1)
+
+
+class Table(QTableWidget):
+	def __init__(self, col_headers):
+		super().__init__(0, len(col_headers))
 		self.cellChanged.connect(self.c_current)
 		self.setMinimumSize(1300, 600)
+		self.setHorizontalHeaderLabels(col_headers)
+		self.resizeColumnsToContents()
+		self.resizeRowsToContents()
 
 	def c_current(self):
 		self.resizeColumnsToContents()
@@ -235,54 +285,6 @@ class MyTable(QTableWidget):
 		value = value.text()
 		print("The current cell is", row, ",", col)
 		print("In this cell we have:", value)
-
-
-class FinPlate(QMainWindow):
-	def __init__(self):
-		super().__init__()
-
-		self.form_widget = MyTable(2, 7)
-		self.setCentralWidget(self.form_widget)
-		col_headers = ['ID', 'Connection type', 'Axial load', 'Sher load', 'Bolt diameter', 'Bolt grade', 'Plate Thickness']
-		self.form_widget.setHorizontalHeaderLabels(col_headers)
-		self.form_widget.resizeColumnsToContents()
-		self.form_widget.resizeRowsToContents()
-
-
-class TensionMember(QMainWindow):
-	def __init__(self):
-		super().__init__()
-
-		self.form_widget = MyTable(1, 5)
-		self.setCentralWidget(self.form_widget)
-		col_headers = ['ID', 'Member length', 'Tensile load', 'Support condition at End 1', 'Support condition at End 2']
-		self.form_widget.setHorizontalHeaderLabels(col_headers)
-		self.form_widget.resizeColumnsToContents()
-		self.form_widget.resizeRowsToContents()
-
-
-class BCEndPlate(QMainWindow):
-	def __init__(self):
-		super().__init__()
-
-		self.form_widget = MyTable(1, 8)
-		self.setCentralWidget(self.form_widget)
-		col_headers = ['ID', 'End plate type', 'Sher load', 'Axial load', 'Maximum Load', 'Bolt diameter', 'Bolt grade', 'Plate thickness']
-		self.form_widget.setHorizontalHeaderLabels(col_headers)
-		self.form_widget.resizeColumnsToContents()
-		self.form_widget.resizeRowsToContents()
-
-
-class CheatAngle(QMainWindow):
-	def __init__(self):
-		super().__init__()
-
-		self.form_widget = MyTable(1, 7)
-		self.setCentralWidget(self.form_widget)
-		col_headers = ['ID', 'Angle leg 1', 'Angle leg 2', 'Angle thickness', 'Sher load', 'Bolt diameter', 'Bolt grade']
-		self.form_widget.setHorizontalHeaderLabels(col_headers)
-		self.form_widget.resizeColumnsToContents()
-		self.form_widget.resizeRowsToContents()
 
 
 if __name__ == '__main__':
