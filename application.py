@@ -1,10 +1,8 @@
 import sys
-from PyQt5.QtWidgets import QLabel, QWidget, QMessageBox, QStatusBar, QComboBox, QApplication, QGridLayout, QVBoxLayout, QHBoxLayout, \
-	QPushButton, QApplication, QMainWindow, QTableWidgetItem, QDialog, QTabWidget, QDialogButtonBox, QTableWidget, \
-	QAction
+from PyQt5.QtWidgets import QLabel, QWidget, QMessageBox, QStatusBar, QComboBox, QApplication, QGridLayout, QVBoxLayout, QHBoxLayout, QPushButton, QApplication, QMainWindow, QTableWidgetItem, QDialog, QTabWidget, QDialogButtonBox, QTableWidget, QAction
 from PyQt5 import QtGui
 from PyQt5.QtGui import QIcon
-from PyQt5 import QtCore
+from PyQt5.QtCore import pyqtSlot
 
 
 class App(QWidget):
@@ -23,22 +21,65 @@ class App(QWidget):
 
 		self.show()
 
+		self.errors = {}
+		self.count_errors = {}
+
+	def validate(self, table):
+		count = 0
+		e = {}
+		for i in range(table.rowCount()):
+			e[i] = {}
+			e2 = e[i]
+			for j in range(table.columnCount()):
+				value = table.item(i,j)
+				if value == None:
+					e2[j] = 'None'
+					count = count + 1
+				else:
+					try:
+						int(value.text())
+					except ValueError:
+						e2[j] = 'not Int'
+						count = count + 1
+		self.errors[id(table)] = e
+		self.count_errors[id(table)] = count
+
+	def setMessageBox(self):
+		print(self.errors)
+		print(self.count_errors)
+		detail = ""
+		for id in self.errors:
+			if self.count_errors[id]:
+				form = self.errors[id]
+				detail = detail + "Errors in tab "+self.tabs.id[id]+":\n"
+				for row in form:
+					row_errors = form[row]
+					for col in row_errors:
+						col_errors = row_errors[col]
+						detail = detail+'('+str(row)+','+str(col)+') '+col_errors+'\n'
+		text = ""
+		for id in self.count_errors:
+			if self.count_errors[id]:
+				text = text + str(self.count_errors[id]) + " error found in tab "+self.tabs.id[id]+'\n'
+		self.msg.msg.setText(text)
+		self.msg.msg.setDetailedText(detail)
+		self.msg.msg.setIcon(QMessageBox.Warning)
+
 
 class MessageBox(QWidget):
 	def __init__(self, parent):
 		super(QWidget, self).__init__(parent)
-		label = QLabel('Error Status:')
-		msg = QMessageBox()
-		msg.setIcon(QMessageBox.Information)
+		self.label = QLabel('Error Status:')
+		self.msg = QMessageBox()
+		self.msg.setIcon(QMessageBox.Information)
 
-		msg.setText("No error")
-		msg.setInformativeText("Everything all right")
-		msg.setDetailedText("This is detailed text")
-		msg.setStandardButtons(QMessageBox.Ignore)
+		self.msg.setText("No error")
+#		self.msg.setInformativeText("Everything all right")
+		self.msg.setStandardButtons(QMessageBox.Ignore)
 
 		self.box = QVBoxLayout(self)
-		self.box.addWidget(label)
-		self.box.addWidget(msg)
+		self.box.addWidget(self.label)
+		self.box.addWidget(self.msg)
 		self.box.addStretch()
 		self.setLayout(self.box)
 
@@ -46,12 +87,14 @@ class MessageBox(QWidget):
 class Buttons(QWidget):
 	def __init__(self, parent):
 		super(QWidget, self).__init__(parent)
+		self.dropdown = QComboBox()
 		self.load = QPushButton('Load')
 		self.validate = QPushButton('Validate')
+		self.validate.clicked.connect(self.validate_action)
 		self.submit = QPushButton('Submit')
 		self.validateall = QPushButton('Validate All')
+		self.validateall.clicked.connect(self.validateall_action)
 		self.submitall = QPushButton('Submit All')
-		self.dropdown = QComboBox()
 		self.dropdown.addItems(["FinPlate", "TensionMember", "BCEndPlate", "CheatAngle"])
 
 		self.vbox = QVBoxLayout(self)
@@ -71,6 +114,27 @@ class Buttons(QWidget):
 		self.vbox.addLayout(self.hbox2)
 		self.setLayout(self.vbox)
 
+	@pyqtSlot()
+	def validate_action(self):
+		index = self.dropdown.currentIndex()
+		if index == 0:
+			App.validate(App.tabs.finplate.form_widget)
+		elif index == 1:
+			App.validate(App.tabs.tensionmember.form_widget)
+		elif index == 2:
+			App.validate(App.tabs.bcendplate.form_widget)
+		else:
+			App.validate(App.tabs.cheatangle.form_widget)
+		App.setMessageBox()
+
+	@pyqtSlot()
+	def validateall_action(self):
+		App.validate(App.tabs.finplate.form_widget)
+		App.validate(App.tabs.tensionmember.form_widget)
+		App.validate(App.tabs.bcendplate.form_widget)
+		App.validate(App.tabs.cheatangle.form_widget)
+		App.setMessageBox()
+
 
 class Tab(QWidget):
 	def __init__(self, parent):
@@ -78,11 +142,15 @@ class Tab(QWidget):
 		self.vbox = QVBoxLayout(self)
 
 		self.tabs = QTabWidget()
-
-		self.tabs.addTab(FinPlate(), "Fin Plate")
-		self.tabs.addTab(TensionMember(), "Tension Member")
-		self.tabs.addTab(BCEndPlate(), "BC End Plate")
-		self.tabs.addTab(CheatAngle(), "Cheat Angle")
+		self.finplate = FinPlate()
+		self.tensionmember = TensionMember()
+		self.bcendplate = BCEndPlate()
+		self.cheatangle = CheatAngle()
+		self.id = {id(self.finplate.form_widget): 'Fin Plate', id(self.tensionmember.form_widget): 'Tension Member', id(self.cheatangle.form_widget): 'Cheat Angle', id(self.bcendplate.form_widget): 'BC End Plate'}
+		self.tabs.addTab(self.finplate, "Fin Plate")
+		self.tabs.addTab(self.tensionmember, "Tension Member")
+		self.tabs.addTab(self.bcendplate, "BC End Plate")
+		self.tabs.addTab(self.cheatangle, "Cheat Angle")
 
 		self.vbox.addWidget(self.tabs)
 		self.setLayout(self.vbox)
@@ -109,10 +177,9 @@ class FinPlate(QMainWindow):
 	def __init__(self):
 		super().__init__()
 
-		self.form_widget = MyTable(10, 7)
+		self.form_widget = MyTable(1, 7)
 		self.setCentralWidget(self.form_widget)
-		col_headers = ['ID', 'Connection type', 'Axial load', 'Sher load', 'Bolt diameter', 'Bolt grade',
-		               'Plate Thickness']
+		col_headers = ['ID', 'Connection type', 'Axial load', 'Sher load', 'Bolt diameter', 'Bolt grade', 'Plate Thickness']
 		self.form_widget.setHorizontalHeaderLabels(col_headers)
 		self.form_widget.resizeColumnsToContents()
 		self.form_widget.resizeRowsToContents()
@@ -122,10 +189,9 @@ class TensionMember(QMainWindow):
 	def __init__(self):
 		super().__init__()
 
-		self.form_widget = MyTable(10, 5)
+		self.form_widget = MyTable(1, 5)
 		self.setCentralWidget(self.form_widget)
-		col_headers = ['ID', 'Member length', 'Tensile load', 'Support condition at End 1',
-		               'Support condition at End 2']
+		col_headers = ['ID', 'Member length', 'Tensile load', 'Support condition at End 1', 'Support condition at End 2']
 		self.form_widget.setHorizontalHeaderLabels(col_headers)
 		self.form_widget.resizeColumnsToContents()
 		self.form_widget.resizeRowsToContents()
@@ -135,10 +201,9 @@ class BCEndPlate(QMainWindow):
 	def __init__(self):
 		super().__init__()
 
-		self.form_widget = MyTable(10, 8)
+		self.form_widget = MyTable(1, 8)
 		self.setCentralWidget(self.form_widget)
-		col_headers = ['ID', 'End plate type', 'Sher load', 'Axial load', 'Maximum Load', 'Bolt diameter', 'Bolt grade',
-		               'Plate thickness']
+		col_headers = ['ID', 'End plate type', 'Sher load', 'Axial load', 'Maximum Load', 'Bolt diameter', 'Bolt grade', 'Plate thickness']
 		self.form_widget.setHorizontalHeaderLabels(col_headers)
 		self.form_widget.resizeColumnsToContents()
 		self.form_widget.resizeRowsToContents()
@@ -148,10 +213,9 @@ class CheatAngle(QMainWindow):
 	def __init__(self):
 		super().__init__()
 
-		self.form_widget = MyTable(10, 7)
+		self.form_widget = MyTable(1, 7)
 		self.setCentralWidget(self.form_widget)
-		col_headers = ['ID', 'Angle leg 1', 'Angle leg 2', 'Angle thickness', 'Sher load', 'Bolt diameter',
-		               'Bolt grade']
+		col_headers = ['ID', 'Angle leg 1', 'Angle leg 2', 'Angle thickness', 'Sher load', 'Bolt diameter', 'Bolt grade']
 		self.form_widget.setHorizontalHeaderLabels(col_headers)
 		self.form_widget.resizeColumnsToContents()
 		self.form_widget.resizeRowsToContents()
