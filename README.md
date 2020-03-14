@@ -30,3 +30,16 @@ Text files are saved as Modulename_ID. For example, if the user submits fin plat
 An easy to use, user-friendly and clean looking GUI application would help the user to quickly adapt to the application.
 
 Also created an installer (Windows or Ubuntu) for your application.
+
+Additional Features i added - 
+force submit - if you want to bypass the error , a warning dialog asks to force submit, also showing all the validation errors
+load/append - give user freedom choose whether he needs to load or append
+validate all/ submit all at once
+insert rows /  delete rows with spin box
+
+
+Yaksh id details:
+Email - 2018352@iiitdmj.ac.in
+username - pd
+
+FOSSEE id same as Yaksha id
