@@ -1,6 +1,8 @@
 import sys
+import csv
+import xlrd
 from PyQt5.QtCore import pyqtSlot
-from PyQt5.QtWidgets import QLabel, QWidget, QSpinBox, QMessageBox, QFileDialog, QComboBox, QGridLayout, QVBoxLayout, QHBoxLayout, QPushButton, QApplication, QTabWidget, QTableWidget
+from PyQt5.QtWidgets import QLabel, QWidget, QTableWidgetItem, QSpinBox, QMessageBox, QFileDialog, QComboBox, QGridLayout, QVBoxLayout, QHBoxLayout, QPushButton, QApplication, QTabWidget, QTableWidget
 
 
 class App(QWidget):
@@ -23,6 +25,35 @@ class App(QWidget):
 		self.count_errors = {}
 		self.data = {}
 
+	def load(self, table):
+		for i in range(table.rowCount()):
+			table.removeRow(0)
+		self.append(table)
+
+	def append(self, table):
+		for d in self.data:
+			table.insertRow(table.rowCount())
+			for i in range(len(d)):
+				if type(d[i]) is float: d[i] = int(d[i])
+				table.setItem(table.rowCount()-1, i, QTableWidgetItem(str(d[i])))
+
+	def readFile(self):
+		file = QFileDialog.getOpenFileName(self, 'Open file', '.', "Excel/CSV File (*.csv *.xls *.xlsx)")
+		if file[0] == '' or None: return False
+		print('extension',file[0][-3:])
+		if file[0][-3:] == 'csv':
+			with open(file[0], 'r', newline = '') as csvfile:
+				reader = csv.reader(csvfile, delimiter = ',', quotechar = '|')
+				self.data = list(reader)
+		elif file[0][-3:] == 'xls' or file[0][-4:] =='xlsx':
+			self.data = []
+			wb = xlrd.open_workbook(file[0])
+			sheet = wb.sheet_by_index(0)
+			for i in range(sheet.nrows):
+				self.data.append(sheet.row_values(i))
+		print(self.data)
+		return True
+
 	def validate(self, table):
 		count = 0
 		e = {}
@@ -34,7 +65,7 @@ class App(QWidget):
 				if table.item(i, 0) is None or table.item(j, 0) is None or i == j:
 					continue
 				try:
-					if table.item(i, 0).text() == table.item(j, 0).text():
+					if table.item(i, 0).text() == table.item(j, 0).text() and table.item(i, 0).text() != '':
 						count = count + 1
 						e[i][0] = 'id of ' + str(i + 1) + ' data similar to ' + str(j + 1) + ' data'
 				except ValueError:
@@ -51,6 +82,7 @@ class App(QWidget):
 					except ValueError:
 						e[i][j] = 'Value is not Int in the cell ' + str(i + 1) + ', ' + str(j + 1)
 						d[i][table.horizontalHeaderItem(j).text()] = value.text()
+						print(e[i][j])
 						count = count + 1
 		self.errors[id(table)] = e
 		self.count_errors[id(table)] = count
@@ -130,6 +162,7 @@ class Buttons(QWidget):
 		super(QWidget, self).__init__(parent)
 		self.dropdown = QComboBox()
 		self.load = QPushButton('Load')
+		self.load.clicked.connect(self.load_action)
 		self.validate = QPushButton('Validate')
 		self.validate.clicked.connect(self.validate_action)
 		self.submit = QPushButton('Submit')
@@ -158,19 +191,25 @@ class Buttons(QWidget):
 		self.setLayout(self.vbox)
 
 	@pyqtSlot()
+	def load_action(self):
+		if App.readFile():
+			table = self.getDropDown()
+			App.load(table)
+
+	@pyqtSlot()
+	def append_action(self):
+		if App.readFile():
+			table = self.getDropDown()
+			App.append(table)
+
+
+	@pyqtSlot()
 	def validate_action(self):
 		App.errors = {}
 		App.count_errors = {}
 		App.data = {}
-		index = self.dropdown.currentIndex()
-		if index == 0:
-			App.validate(App.tabs.finplate)
-		elif index == 1:
-			App.validate(App.tabs.tensionmember)
-		elif index == 2:
-			App.validate(App.tabs.bcendplate)
-		else:
-			App.validate(App.tabs.cheatangle)
+		table = self.getDropDown()
+		App.validate(table)
 		App.setMessageBox()
 		print(App.count_errors)
 		print(App.errors)
@@ -199,6 +238,16 @@ class Buttons(QWidget):
 	def submitall_action(self):
 		self.validateall_action()
 		App.submit()
+
+	def getDropDown(self):
+		index = self.dropdown.currentIndex()
+		if index == 0:
+			return App.tabs.finplate
+		if index == 1:
+			return App.tabs.tensionmember
+		if index == 2:
+			return App.tabs.bcendplate
+		return App.tabs.cheatangle
 
 
 class Tab(QWidget):
@@ -282,6 +331,7 @@ class Table(QTableWidget):
 		row = self.currentRow()
 		col = self.currentColumn()
 		value = self.item(row, col)
+		if value is None: return
 		value = value.text()
 		print("The current cell is", row, ",", col)
 		print("In this cell we have:", value)
