@@ -40,7 +40,6 @@ class App(QWidget):
 	def readFile(self):
 		file = QFileDialog.getOpenFileName(self, 'Open file', '.', "Excel/CSV File (*.csv *.xls *.xlsx)")
 		if file[0] == '' or None: return False
-		print('extension',file[0][-3:])
 		if file[0][-3:] == 'csv':
 			with open(file[0], 'r', newline = '') as csvfile:
 				reader = csv.reader(csvfile, delimiter = ',', quotechar = '|')
@@ -51,7 +50,6 @@ class App(QWidget):
 			sheet = wb.sheet_by_index(0)
 			for i in range(sheet.nrows):
 				self.data.append(sheet.row_values(i))
-		print(self.data)
 		return True
 
 	def validate(self, table):
@@ -82,7 +80,6 @@ class App(QWidget):
 					except ValueError:
 						e[i][j] = 'Value is not Int in the cell ' + str(i + 1) + ', ' + str(j + 1)
 						d[i][table.horizontalHeaderItem(j).text()] = value.text()
-						print(e[i][j])
 						count = count + 1
 		self.errors[id(table)] = e
 		self.count_errors[id(table)] = count
@@ -127,10 +124,8 @@ class App(QWidget):
 		for id in self.data:
 			for d in self.data[id].values():
 				if d['ID'] is None: continue
-				print(directory + '/' + self.tabs.id[id] + '_' + str(d['ID']) + '.txt')
 				with open(directory + '/' + self.tabs.id[id] + '_' + str(d['ID']) + '.txt', 'w') as file:
 					file.write(str(d))
-					print(d)
 
 
 class MessageBox(QWidget):
@@ -209,9 +204,6 @@ class Buttons(QWidget):
 		table = self.getDropDown()
 		App.validate(table)
 		App.setMessageBox()
-		print(App.count_errors)
-		print(App.errors)
-		print(App.data)
 
 	@pyqtSlot()
 	def validateall_action(self):
@@ -223,9 +215,6 @@ class Buttons(QWidget):
 		App.validate(App.tabs.bcendplate)
 		App.validate(App.tabs.cheatangle)
 		App.setMessageBox()
-		print(App.count_errors)
-		print(App.errors)
-		print(App.data)
 
 	@pyqtSlot()
 	def submit_action(self):
@@ -326,13 +315,6 @@ class Table(QTableWidget):
 	def c_current(self):
 		self.resizeColumnsToContents()
 		self.resizeRowsToContents()
-		row = self.currentRow()
-		col = self.currentColumn()
-		value = self.item(row, col)
-		if value is None: return
-		value = value.text()
-		print("The current cell is", row, ",", col)
-		print("In this cell we have:", value)
 
 
 if __name__ == '__main__':
