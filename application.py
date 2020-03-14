@@ -2,7 +2,7 @@ import sys
 import csv
 import xlrd
 from PyQt5.QtCore import pyqtSlot
-from PyQt5.QtWidgets import QLabel, QWidget, QTableWidgetItem, QSpinBox, QMessageBox, QFileDialog, QComboBox, QGridLayout, QVBoxLayout, QHBoxLayout, QPushButton, QApplication, QTabWidget, QTableWidget
+from PyQt5.QtWidgets import QLabel, QCheckBox ,QWidget, QTableWidgetItem, QSpinBox, QMessageBox, QFileDialog, QComboBox, QGridLayout, QVBoxLayout, QHBoxLayout, QPushButton, QApplication, QTabWidget, QTableWidget
 
 
 class App(QWidget):
@@ -167,6 +167,7 @@ class Buttons(QWidget):
 		self.validate.clicked.connect(self.validate_action)
 		self.submit = QPushButton('Submit')
 		self.submit.clicked.connect(self.submit_action)
+		self.checkbox = QCheckBox('Load in append mode')
 		self.validateall = QPushButton('Validate All')
 		self.validateall.clicked.connect(self.validateall_action)
 		self.submitall = QPushButton('Submit All')
@@ -186,6 +187,7 @@ class Buttons(QWidget):
 		self.vbox.addSpacing(40)
 		self.vbox.addWidget(self.dropdown)
 		self.vbox.addLayout(self.hbox)
+		self.vbox.addWidget(self.checkbox)
 		self.vbox.addSpacing(50)
 		self.vbox.addLayout(self.hbox2)
 		self.setLayout(self.vbox)
@@ -194,14 +196,10 @@ class Buttons(QWidget):
 	def load_action(self):
 		if App.readFile():
 			table = self.getDropDown()
-			App.load(table)
-
-	@pyqtSlot()
-	def append_action(self):
-		if App.readFile():
-			table = self.getDropDown()
-			App.append(table)
-
+			if self.checkbox.checkState():
+				App.append(table)
+			else:
+				App.load(table)
 
 	@pyqtSlot()
 	def validate_action(self):
